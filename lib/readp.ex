@@ -8,7 +8,7 @@ defmodule Readp do
         case :httpc.request 'https://readability.com/api/content/v1/parser?token=' ++ to_char_list(readability_key) ++ '&url=' ++ to_char_list(url) do
             {:ok, {{_,_,'OK'}, _, resp}} ->
                 case JSEX.decode to_string(resp), [{:labels, :atom}] do
-                    {:ok, parsed}   -> {:ok, parsed[:title], parsed[:content]}
+                    {:ok, parsed}   -> {:ok, parsed[:title], parsed[:excerpt]}
                     _               -> {:error}
                 end
             err ->
@@ -32,10 +32,10 @@ defmodule Readp do
         :inets.start
         :ssl.start
 
-        Enum.map itemlist, fn item ->
+        Parallel.map itemlist, fn item ->
             case parse item[:link], readability_key do
                 {:ok, title, content} ->
-                    pid <- {:ok, [title: xml_quote(title), summary: xml_quote(content <> "<hr>" <> item[:summary]), link: xml_quote(item[:link]), clients: item[:clients]]}
+                    pid <- {:ok, [title: xml_quote(title), summary: xml_quote(item[:summary] <> "<hr>" <> content), link: xml_quote(item[:link]), clients: item[:clients]]}
                 _ -> {:error}
                 end
         end
